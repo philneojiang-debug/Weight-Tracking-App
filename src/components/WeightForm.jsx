@@ -41,28 +41,42 @@ export default function WeightForm({ onAdd, existingDates = [] }) {
         Log Weight
       </h2>
 
-      {/* Date + Unit row */}
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-slate-500 dark:text-white/50 mb-1.5">Date</label>
-          <input
-            type="date"
-            value={date}
-            max={today()}
-            onChange={e => setDate(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all"
-          />
-        </div>
+      {/* Date row — full width */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 dark:text-white/50 mb-1.5">Date</label>
+        <input
+          type="date"
+          value={date}
+          max={today()}
+          onChange={e => setDate(e.target.value)}
+          className="w-full bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all"
+        />
+      </div>
 
-        <div className="flex-shrink-0">
-          <label className="block text-xs font-medium text-slate-500 dark:text-white/50 mb-1.5">Unit</label>
-          <div className="flex bg-slate-100 dark:bg-white/10 rounded-xl p-1 gap-1">
+      {/* Weight + Unit row */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 dark:text-white/50 mb-1.5">Weight</label>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder={unit === 'lbs' ? '175.0' : '79.4'}
+            value={weightStr}
+            step="0.1"
+            min="50"
+            max={unit === 'lbs' ? '700' : '320'}
+            onChange={e => setWeightStr(e.target.value)}
+            className="flex-1 min-w-0 bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-xl font-semibold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all placeholder-slate-300 dark:placeholder-white/20"
+            required
+            autoComplete="off"
+          />
+          <div className="flex-shrink-0 flex bg-slate-100 dark:bg-white/10 rounded-xl p-1 gap-1 self-stretch">
             {['lbs', 'kg'].map(u => (
               <button
                 key={u}
                 type="button"
                 onClick={() => setUnit(u)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-4 rounded-lg text-sm font-medium transition-all ${
                   unit === u
                     ? 'bg-teal-600 text-white shadow-sm'
                     : 'text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/80'
@@ -73,26 +87,6 @@ export default function WeightForm({ onAdd, existingDates = [] }) {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Weight input */}
-      <div>
-        <label className="block text-xs font-medium text-slate-500 dark:text-white/50 mb-1.5">
-          Weight ({unit})
-        </label>
-        <input
-          type="number"
-          inputMode="decimal"
-          placeholder={unit === 'lbs' ? '175.0' : '79.4'}
-          value={weightStr}
-          step="0.1"
-          min="50"
-          max={unit === 'lbs' ? '700' : '320'}
-          onChange={e => setWeightStr(e.target.value)}
-          className="w-full bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-xl font-semibold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all placeholder-slate-300 dark:placeholder-white/20"
-          required
-          autoComplete="off"
-        />
       </div>
 
       {/* Submit */}
