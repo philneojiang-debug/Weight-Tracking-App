@@ -86,7 +86,7 @@ export default function WeightChart({ entries, showMedian, selectedId, onSelectE
       <ResponsiveContainer width="100%" height={280}>
         <LineChart
           data={chartData}
-          margin={{ top: 8, right: 8, left: -16, bottom: 4 }}
+          margin={{ top: 8, right: 8, left: -8, bottom: 4 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -108,7 +108,7 @@ export default function WeightChart({ entries, showMedian, selectedId, onSelectE
             axisLine={false}
             tickLine={false}
             tickFormatter={v => `${v}`}
-            width={40}
+            width={48}
           />
           <Tooltip content={<CustomTooltip />} />
 
