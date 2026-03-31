@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="28.8" fill="#0f172a"/>
+  <rect width="144" height="144" rx="28.8" fill="#0d9488" opacity="0.15"/>
+  <!-- Chart line -->
+  <polyline 
+    points="21.599999999999998,93.60000000000001 46.08,57.6 72,74.88 97.92,43.199999999999996 122.39999999999999,64.8"
+    fill="none" 
+    stroke="#2dd4bf" 
+    stroke-width="8.64" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+  />
+  <!-- Dots -->
+  <circle cx="21.599999999999998" cy="93.60000000000001" r="6.4799999999999995" fill="#2dd4bf"/>
+  <circle cx="46.08" cy="57.6" r="6.4799999999999995" fill="#2dd4bf"/>
+  <circle cx="72" cy="74.88" r="6.4799999999999995" fill="#2dd4bf"/>
+  <circle cx="97.92" cy="43.199999999999996" r="6.4799999999999995" fill="#2dd4bf"/>
+  <circle cx="122.39999999999999" cy="64.8" r="6.4799999999999995" fill="#2dd4bf"/>
+</svg>

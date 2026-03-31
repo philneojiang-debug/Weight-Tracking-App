@@ -1,0 +1,53 @@
+export const RANGES = [
+  { key: '1M',  label: '1M',  months: 1  },
+  { key: '3M',  label: '3M',  months: 3  },
+  { key: '6M',  label: '6M',  months: 6  },
+  { key: '1Y',  label: '1Y',  months: 12 },
+  { key: '3Y',  label: '3Y',  months: 36 },
+  { key: 'ALL', label: 'All', months: null },
+]
+
+export function filterEntriesByRange(entries, rangeKey) {
+  if (rangeKey === 'ALL' || !entries.length) return entries
+  const range = RANGES.find(r => r.key === rangeKey)
+  if (!range) return entries
+
+  // Avoid month-overflow: e.g. March 31 - 1 month = Feb 28, not March 3
+  const now = new Date()
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - range.months, now.getDate())
+  // If day overflowed (e.g. Feb 31 → Mar 3), back up to last day of intended month
+  if (cutoff.getDate() !== now.getDate()) {
+    cutoff.setDate(0) // last day of the previous month
+  }
+  const cutoffStr = cutoff.toLocaleDateString('en-CA')
+  return entries.filter(e => e.date >= cutoffStr)
+}
+
+export default function RangeSelector({ value, onChange, entries }) {
+  return (
+    <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+      {RANGES.map(range => {
+        // Disable ranges that have no data
+        const filtered = filterEntriesByRange(entries, range.key)
+        const disabled = filtered.length === 0
+
+        return (
+          <button
+            key={range.key}
+            onClick={() => !disabled && onChange(range.key)}
+            disabled={disabled}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              value === range.key
+                ? 'bg-teal-600 text-white shadow-sm'
+                : disabled
+                ? 'text-slate-300 dark:text-white/20 cursor-not-allowed'
+                : 'text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10'
+            }`}
+          >
+            {range.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
