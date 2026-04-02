@@ -9,15 +9,17 @@ import Header from './components/Header'
 import AuthScreen from './components/AuthScreen'
 import RangeSelector, { filterEntriesByRange } from './components/RangeSelector'
 
-function WeightDelta({ entries, unit }) {
+function WeightDelta({ entries, unit, theme }) {
+  const isPink = theme === 'pink'
+  const isDark = theme === 'dark'
+
   const delta = useMemo(() => {
     if (entries.length < 2) return null
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
     const diff = sorted[sorted.length - 1].weight_lbs - sorted[0].weight_lbs
-    const converted = unit === 'kg'
+    return unit === 'kg'
       ? parseFloat((diff / 2.20462).toFixed(1))
       : parseFloat(diff.toFixed(1))
-    return converted
   }, [entries, unit])
 
   if (delta === null) return null
@@ -25,6 +27,18 @@ function WeightDelta({ entries, unit }) {
   const gained  = delta > 0
   const neutral = delta === 0
   const abs     = Math.abs(delta)
+
+  if (isPink) {
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+        neutral ? 'bg-pink-100 text-pink-300'
+        : gained ? 'bg-red-100 text-red-400'
+        : 'bg-emerald-100 text-emerald-500'
+      }`}>
+        {neutral ? '→' : gained ? '↑' : '↓'} {abs} {unit}
+      </span>
+    )
+  }
 
   return (
     <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -40,8 +54,8 @@ function WeightDelta({ entries, unit }) {
 }
 
 export default function App() {
-  const { isDark, toggleTheme }                         = useTheme()
-  const { user, loading: authLoading, signIn, signUp, signOut } = useAuth()
+  const { theme, isDark, cycleTheme }                              = useTheme()
+  const { user, loading: authLoading, signIn, signUp, signOut }   = useAuth()
   const { entries, loading, error, isOnline, addEntry, updateEntry, deleteEntry } = useWeightData(user?.id)
 
   const [showMedian, setShowMedian] = useState(false)
@@ -50,11 +64,15 @@ export default function App() {
   const [unit, setUnit]             = useState('lbs')
   const rowRefs = useRef({})
 
+  const isPink = theme === 'pink'
+
   useEffect(() => {
-    document.body.className = isDark
+    document.body.className = isPink
+      ? 'bg-pink-50 text-rose-900'
+      : isDark
       ? 'bg-slate-950 text-white'
       : 'bg-slate-100 text-slate-900'
-  }, [isDark])
+  }, [theme, isDark, isPink])
 
   const handleSelectEntry = useCallback((payload) => {
     setSelectedId(payload.id)
@@ -64,9 +82,7 @@ export default function App() {
     }, 50)
   }, [])
 
-  const handleRowRef = useCallback((id, ref) => {
-    rowRefs.current[id] = ref
-  }, [])
+  const handleRowRef = useCallback((id, ref) => { rowRefs.current[id] = ref }, [])
 
   const existingDates  = entries.map(e => e.date)
   const visibleEntries = filterEntriesByRange(entries, range)
@@ -74,29 +90,40 @@ export default function App() {
   // ── Auth loading splash ──────────────────────────────────────────────────
   if (authLoading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'dark bg-slate-950' : 'bg-slate-100'}`}>
-        <div className="w-8 h-8 rounded-xl bg-teal-600 animate-pulse" />
+      <div className={`min-h-screen flex items-center justify-center ${isPink ? 'bg-pink-50' : isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
+        <div className={`w-8 h-8 rounded-xl animate-pulse ${isPink ? 'bg-pink-400' : 'bg-teal-600'}`} />
       </div>
     )
   }
 
-  // ── Not signed in — show auth screen ────────────────────────────────────
+  // ── Not signed in ────────────────────────────────────────────────────────
   if (isOnline && !user) {
-    return (
-      <div className={isDark ? 'dark' : ''}>
-        <AuthScreen onSignIn={signIn} onSignUp={signUp} />
-      </div>
-    )
+    return <AuthScreen onSignIn={signIn} onSignUp={signUp} theme={theme} />
   }
+
+  // Chart card colours
+  const chartCard = isPink
+    ? 'bg-white border-pink-200'
+    : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10'
+
+  const headerText = isPink
+    ? 'text-pink-400'
+    : 'text-slate-500 dark:text-white/70'
+
+  const medianBtn = (active) => isPink
+    ? active ? 'bg-pink-100 text-rose-700' : 'bg-white text-pink-300 hover:text-pink-500'
+    : active
+      ? 'bg-slate-200 dark:bg-white/20 text-slate-700 dark:text-white'
+      : 'bg-slate-100 dark:bg-white/[0.08] text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70'
 
   // ── Main app ─────────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen ${isDark ? 'dark bg-slate-950' : 'bg-slate-100'} transition-colors duration-300`}>
+    <div className={`min-h-screen transition-colors duration-300 ${isPink ? 'bg-pink-50' : isDark ? 'dark bg-slate-950' : 'bg-slate-100'}`}>
       <div className="max-w-2xl mx-auto px-4 pb-safe pb-8 overflow-x-hidden">
 
         <Header
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
+          theme={theme}
+          onCycleTheme={cycleTheme}
           isOnline={isOnline}
           user={user}
           onSignOut={signOut}
@@ -114,40 +141,33 @@ export default function App() {
             existingDates={existingDates}
             unit={unit}
             onUnitChange={setUnit}
+            theme={theme}
           />
         </div>
 
         {entries.length > 0 && (
-          <div className="mb-5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 pt-4 pb-2 shadow-sm dark:shadow-none">
-
-            {/* Chart header row */}
+          <div className={`mb-5 border rounded-2xl px-3 pt-4 pb-2 shadow-sm ${chartCard}`}>
+            {/* Chart header */}
             <div className="flex items-center justify-between mb-2 px-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm font-semibold text-slate-500 dark:text-white/70">
+                <h2 className={`text-sm font-semibold ${headerText}`}>
                   {visibleEntries.length}{visibleEntries.length !== entries.length ? ` of ${entries.length}` : ''}{' '}
                   {entries.length === 1 ? 'entry' : 'entries'}
                 </h2>
-                <WeightDelta entries={visibleEntries} unit={unit} />
+                <WeightDelta entries={visibleEntries} unit={unit} theme={theme} />
               </div>
               <button
                 onClick={() => setShowMedian(s => !s)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${
-                  showMedian
-                    ? 'bg-slate-200 dark:bg-white/20 text-slate-700 dark:text-white'
-                    : 'bg-slate-100 dark:bg-white/[0.08] text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${medianBtn(showMedian)}`}
               >
-                <span
-                  className="inline-block w-4 rounded-full"
-                  style={{ borderTop: '2px dashed currentColor', height: '0px', marginTop: '1px' }}
-                />
+                <span className="inline-block w-4 rounded-full" style={{ borderTop: '2px dashed currentColor', height: '0px', marginTop: '1px' }} />
                 7-day median
               </button>
             </div>
 
             {/* Range selector */}
             <div className="px-1 mb-3">
-              <RangeSelector value={range} onChange={setRange} entries={entries} />
+              <RangeSelector value={range} onChange={setRange} entries={entries} theme={theme} />
             </div>
 
             <WeightChart
@@ -156,12 +176,13 @@ export default function App() {
               selectedId={selectedId}
               onSelectEntry={handleSelectEntry}
               unit={unit}
+              theme={theme}
             />
           </div>
         )}
 
         {loading && (
-          <div className="text-center py-12 text-slate-400 dark:text-white/30 text-sm">
+          <div className={`text-center py-12 text-sm ${isPink ? 'text-pink-300' : 'text-slate-400 dark:text-white/30'}`}>
             Loading…
           </div>
         )}
@@ -174,11 +195,12 @@ export default function App() {
             onUpdate={updateEntry}
             onRowRef={handleRowRef}
             unit={unit}
+            theme={theme}
           />
         )}
 
         {!loading && entries.length === 0 && (
-          <div className="text-center py-16 text-slate-300 dark:text-white/20">
+          <div className={`text-center py-16 ${isPink ? 'text-pink-200' : 'text-slate-300 dark:text-white/20'}`}>
             <div className="text-5xl mb-4">⚖️</div>
             <p className="text-base font-medium">Start tracking your weight</p>
             <p className="text-sm mt-1">Log your first entry above</p>

@@ -1,23 +1,23 @@
 import { useState, useEffect } from 'react'
 
+const THEMES = ['dark', 'light', 'pink']
+
 export function useTheme() {
-  const [isDark, setIsDark] = useState(() => {
+  const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem('theme')
-    if (stored) return stored === 'dark'
-    return true // default dark
+    return THEMES.includes(stored) ? stored : 'dark'
   })
 
   useEffect(() => {
     const root = document.documentElement
-    if (isDark) {
-      root.classList.add('dark')
-      root.classList.remove('light')
-    } else {
-      root.classList.remove('dark')
-      root.classList.add('light')
-    }
-    localStorage.setItem('theme', isDark ? 'dark' : 'light')
-  }, [isDark])
+    // Remove all theme classes then apply current
+    root.classList.remove('dark', 'light', 'pink')
+    root.classList.add(theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
-  return { isDark, toggleTheme: () => setIsDark(d => !d) }
+  const cycleTheme = () =>
+    setTheme(t => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length])
+
+  return { theme, isDark: theme === 'dark', cycleTheme }
 }

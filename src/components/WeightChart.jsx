@@ -1,11 +1,6 @@
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { useMemo } from 'react'
 
@@ -31,17 +26,45 @@ function formatXAxis(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function toLbs(v) { return v }
 function toKg(v)  { return parseFloat((v / 2.20462).toFixed(1)) }
+function toLbs(v) { return v }
 
-function CustomDot({ cx, cy, payload, selectedId, onClick }) {
+// Per-theme chart palette
+const PALETTE = {
+  dark: {
+    line:       '#0d9488',
+    dotFill:    '#0d9488',
+    dotSel:     '#2dd4bf',
+    median:     'rgba(255,255,255,0.25)',
+    grid:       'rgba(255,255,255,0.06)',
+    axis:       'rgba(255,255,255,0.35)',
+  },
+  light: {
+    line:       '#0d9488',
+    dotFill:    '#0d9488',
+    dotSel:     '#2dd4bf',
+    median:     'rgba(0,0,0,0.18)',
+    grid:       'rgba(0,0,0,0.06)',
+    axis:       'rgba(0,0,0,0.35)',
+  },
+  pink: {
+    line:       '#ec4899',
+    dotFill:    '#ec4899',
+    dotSel:     '#f9a8d4',
+    median:     'rgba(190,24,93,0.35)',
+    grid:       'rgba(190,24,93,0.1)',
+    axis:       'rgba(190,24,93,0.55)',
+  },
+}
+
+function CustomDot({ cx, cy, payload, selectedId, onClick, palette }) {
   const isSelected = payload.id === selectedId
   return (
     <circle
       cx={cx}
       cy={cy}
       r={isSelected ? 7 : 4}
-      fill={isSelected ? '#2dd4bf' : '#0d9488'}
+      fill={isSelected ? palette.dotSel : palette.dotFill}
       stroke={isSelected ? '#fff' : 'transparent'}
       strokeWidth={isSelected ? 2 : 0}
       style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
@@ -50,23 +73,36 @@ function CustomDot({ cx, cy, payload, selectedId, onClick }) {
   )
 }
 
-function CustomTooltip({ active, payload, label, unit }) {
+function CustomTooltip({ active, payload, label, unit, theme }) {
   if (!active || !payload?.length) return null
   const data = payload[0]?.payload
-  const w = data?.displayWeight
-  const m = data?.displayMedian
+  const isPink = theme === 'pink'
+  const isDark = theme === 'dark'
   return (
-    <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-2.5 shadow-2xl backdrop-blur-sm">
-      <p className="text-slate-400 dark:text-white/60 text-xs mb-1">{formatXAxis(label)}</p>
-      <p className="text-teal-600 dark:text-teal-400 font-semibold text-sm">{w} {unit}</p>
-      {m != null && (
-        <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">7-day median: {m} {unit}</p>
+    <div className={`border rounded-xl px-3 py-2.5 shadow-2xl backdrop-blur-sm ${
+      isPink
+        ? 'bg-white border-pink-200'
+        : isDark
+        ? 'bg-slate-900/95 border-white/15'
+        : 'bg-white border-slate-200'
+    }`}>
+      <p className={`text-xs mb-1 ${isPink ? 'text-pink-300' : isDark ? 'text-white/60' : 'text-slate-400'}`}>
+        {formatXAxis(label)}
+      </p>
+      <p className={`font-semibold text-sm ${isPink ? 'text-pink-500' : isDark ? 'text-teal-400' : 'text-teal-600'}`}>
+        {data?.displayWeight} {unit}
+      </p>
+      {data?.displayMedian != null && (
+        <p className={`text-xs mt-0.5 ${isPink ? 'text-pink-300' : isDark ? 'text-white/40' : 'text-slate-400'}`}>
+          7-day median: {data.displayMedian} {unit}
+        </p>
       )}
     </div>
   )
 }
 
-export default function WeightChart({ entries, showMedian, selectedId, onSelectEntry, unit = 'lbs' }) {
+export default function WeightChart({ entries, showMedian, selectedId, onSelectEntry, unit = 'lbs', theme = 'dark' }) {
+  const palette = PALETTE[theme] ?? PALETTE.dark
   const convert = unit === 'kg' ? toKg : toLbs
 
   const chartData = useMemo(() => {
@@ -80,12 +116,13 @@ export default function WeightChart({ entries, showMedian, selectedId, onSelectE
   }, [entries, unit])
 
   const weights = chartData.map(d => d.displayWeight)
-  const minW = weights.length ? parseFloat((Math.min(...weights) - (unit === 'kg' ? 1.5 : 3)).toFixed(1)) : (unit === 'kg' ? 45 : 100)
-  const maxW = weights.length ? parseFloat((Math.max(...weights) + (unit === 'kg' ? 1.5 : 3)).toFixed(1)) : (unit === 'kg' ? 100 : 200)
+  const pad = unit === 'kg' ? 1.5 : 3
+  const minW = weights.length ? parseFloat((Math.min(...weights) - pad).toFixed(1)) : (unit === 'kg' ? 45 : 100)
+  const maxW = weights.length ? parseFloat((Math.max(...weights) + pad).toFixed(1)) : (unit === 'kg' ? 100 : 200)
 
   if (!chartData.length) {
     return (
-      <div className="flex items-center justify-center h-64 text-white/30 text-sm">
+      <div className="flex items-center justify-center h-64 text-slate-300 dark:text-white/30 text-sm">
         No data yet — log your first weight above
       </div>
     )
@@ -94,19 +131,12 @@ export default function WeightChart({ entries, showMedian, selectedId, onSelectE
   return (
     <div className="w-full">
       <ResponsiveContainer width="100%" height={280}>
-        <LineChart
-          data={chartData}
-          margin={{ top: 8, right: 8, left: -8, bottom: 4 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="rgba(255,255,255,0.06)"
-            vertical={false}
-          />
+        <LineChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
           <XAxis
             dataKey="date"
             tickFormatter={formatXAxis}
-            tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+            tick={{ fill: palette.axis, fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"
@@ -114,31 +144,29 @@ export default function WeightChart({ entries, showMedian, selectedId, onSelectE
           />
           <YAxis
             domain={[minW, maxW]}
-            tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+            tick={{ fill: palette.axis, fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={v => `${v}`}
             width={48}
           />
-          <Tooltip content={<CustomTooltip unit={unit} />} />
+          <Tooltip content={<CustomTooltip unit={unit} theme={theme} />} />
 
-          {/* Main weight line */}
           <Line
             type="monotone"
             dataKey="displayWeight"
-            stroke="#0d9488"
+            stroke={palette.line}
             strokeWidth={2.5}
-            dot={<CustomDot selectedId={selectedId} onClick={onSelectEntry} />}
+            dot={<CustomDot selectedId={selectedId} onClick={onSelectEntry} palette={palette} />}
             activeDot={{ r: 0 }}
             connectNulls
           />
 
-          {/* 7-day median overlay */}
           {showMedian && (
             <Line
               type="monotone"
               dataKey="displayMedian"
-              stroke="rgba(255,255,255,0.25)"
+              stroke={palette.median}
               strokeWidth={1.5}
               strokeDasharray="4 3"
               dot={false}
