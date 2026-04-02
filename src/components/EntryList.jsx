@@ -5,10 +5,21 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function EditRow({ entry, onSave, onCancel }) {
+function toKg(lbs) {
+  return parseFloat((lbs / 2.20462).toFixed(1))
+}
+
+function displayWeight(lbs, unit) {
+  return unit === 'kg' ? toKg(lbs) : lbs
+}
+
+function EditRow({ entry, onSave, onCancel, unit: globalUnit }) {
   const [date, setDate] = useState(entry.date)
-  const [weightStr, setWeightStr] = useState(String(entry.weight_lbs))
-  const [unit, setUnit] = useState('lbs')
+  // Initialise the edit field in whatever unit the app is currently using
+  const [weightStr, setWeightStr] = useState(
+    String(displayWeight(entry.weight_lbs, globalUnit))
+  )
+  const [unit, setUnit] = useState(globalUnit)
   const inputRef = useRef(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -28,7 +39,9 @@ function EditRow({ entry, onSave, onCancel }) {
   const handleSave = () => {
     const raw = parseFloat(weightStr)
     if (isNaN(raw) || raw <= 0) return
-    const weight_lbs = unit === 'kg' ? parseFloat((raw * 2.20462).toFixed(1)) : parseFloat(raw.toFixed(1))
+    const weight_lbs = unit === 'kg'
+      ? parseFloat((raw * 2.20462).toFixed(1))
+      : parseFloat(raw.toFixed(1))
     onSave({ date, weight_lbs })
   }
 
@@ -47,7 +60,7 @@ function EditRow({ entry, onSave, onCancel }) {
             <button
               key={u}
               onClick={() => handleUnitChange(u)}
-              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              className={`w-9 py-1.5 rounded-md text-xs font-medium transition-all ${
                 unit === u ? 'bg-teal-600 text-white' : 'text-slate-500 dark:text-white/50'
               }`}
             >
@@ -62,7 +75,7 @@ function EditRow({ entry, onSave, onCancel }) {
         inputMode="decimal"
         value={weightStr}
         step="0.1"
-        min="50"
+        min="1"
         onChange={e => setWeightStr(e.target.value)}
         className="w-full bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-lg px-2 py-2 text-slate-900 dark:text-white text-base font-semibold focus:outline-none focus:border-teal-500"
       />
@@ -84,7 +97,7 @@ function EditRow({ entry, onSave, onCancel }) {
   )
 }
 
-function EntryRow({ entry, isHighlighted, onDelete, onUpdate, onRef }) {
+function EntryRow({ entry, isHighlighted, onDelete, onUpdate, onRef, unit }) {
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const rowRef = useRef(null)
@@ -103,6 +116,8 @@ function EntryRow({ entry, isHighlighted, onDelete, onUpdate, onRef }) {
     if (ok) setEditing(false)
   }
 
+  const w = displayWeight(entry.weight_lbs, unit)
+
   return (
     <div
       ref={rowRef}
@@ -119,11 +134,14 @@ function EntryRow({ entry, isHighlighted, onDelete, onUpdate, onRef }) {
           entry={entry}
           onSave={handleSave}
           onCancel={() => setEditing(false)}
+          unit={unit}
         />
       ) : (
         <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <p className="text-slate-900 dark:text-white font-semibold text-base">{entry.weight_lbs} lbs</p>
+            <p className="text-slate-900 dark:text-white font-semibold text-base">
+              {w} {unit}
+            </p>
             <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">{formatDate(entry.date)}</p>
           </div>
           <div className="flex gap-2">
@@ -152,7 +170,7 @@ function EntryRow({ entry, isHighlighted, onDelete, onUpdate, onRef }) {
   )
 }
 
-export default function EntryList({ entries, selectedId, onDelete, onUpdate, onRowRef }) {
+export default function EntryList({ entries, selectedId, onDelete, onUpdate, onRowRef, unit = 'lbs' }) {
   const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date))
 
   if (!sorted.length) return null
@@ -171,6 +189,7 @@ export default function EntryList({ entries, selectedId, onDelete, onUpdate, onR
             onDelete={onDelete}
             onUpdate={onUpdate}
             onRef={onRowRef}
+            unit={unit}
           />
         ))}
       </div>

@@ -6,8 +6,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
-  Dot,
 } from 'recharts'
 import { useMemo } from 'react'
 
@@ -33,7 +31,10 @@ function formatXAxis(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function CustomDot({ cx, cy, payload, selectedId, onClick, index }) {
+function toLbs(v) { return v }
+function toKg(v)  { return parseFloat((v / 2.20462).toFixed(1)) }
+
+function CustomDot({ cx, cy, payload, selectedId, onClick }) {
   const isSelected = payload.id === selectedId
   return (
     <circle
@@ -49,29 +50,38 @@ function CustomDot({ cx, cy, payload, selectedId, onClick, index }) {
   )
 }
 
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload, label, unit }) {
   if (!active || !payload?.length) return null
   const data = payload[0]?.payload
+  const w = data?.displayWeight
+  const m = data?.displayMedian
   return (
     <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-2.5 shadow-2xl backdrop-blur-sm">
       <p className="text-slate-400 dark:text-white/60 text-xs mb-1">{formatXAxis(label)}</p>
-      <p className="text-teal-600 dark:text-teal-400 font-semibold text-sm">{data?.weight_lbs} lbs</p>
-      {data?.median7 && (
-        <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">7-day median: {data.median7} lbs</p>
+      <p className="text-teal-600 dark:text-teal-400 font-semibold text-sm">{w} {unit}</p>
+      {m != null && (
+        <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">7-day median: {m} {unit}</p>
       )}
     </div>
   )
 }
 
-export default function WeightChart({ entries, showMedian, selectedId, onSelectEntry }) {
+export default function WeightChart({ entries, showMedian, selectedId, onSelectEntry, unit = 'lbs' }) {
+  const convert = unit === 'kg' ? toKg : toLbs
+
   const chartData = useMemo(() => {
     if (!entries.length) return []
-    return rolling7DayMedian([...entries].sort((a, b) => a.date.localeCompare(b.date)))
-  }, [entries])
+    const withMedian = rolling7DayMedian([...entries].sort((a, b) => a.date.localeCompare(b.date)))
+    return withMedian.map(d => ({
+      ...d,
+      displayWeight: convert(d.weight_lbs),
+      displayMedian: d.median7 != null ? convert(d.median7) : null,
+    }))
+  }, [entries, unit])
 
-  const weights = chartData.map(d => d.weight_lbs)
-  const minW = weights.length ? Math.floor(Math.min(...weights) - 3) : 100
-  const maxW = weights.length ? Math.ceil(Math.max(...weights) + 3) : 200
+  const weights = chartData.map(d => d.displayWeight)
+  const minW = weights.length ? parseFloat((Math.min(...weights) - (unit === 'kg' ? 1.5 : 3)).toFixed(1)) : (unit === 'kg' ? 45 : 100)
+  const maxW = weights.length ? parseFloat((Math.max(...weights) + (unit === 'kg' ? 1.5 : 3)).toFixed(1)) : (unit === 'kg' ? 100 : 200)
 
   if (!chartData.length) {
     return (
@@ -110,12 +120,12 @@ export default function WeightChart({ entries, showMedian, selectedId, onSelectE
             tickFormatter={v => `${v}`}
             width={48}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip unit={unit} />} />
 
           {/* Main weight line */}
           <Line
             type="monotone"
-            dataKey="weight_lbs"
+            dataKey="displayWeight"
             stroke="#0d9488"
             strokeWidth={2.5}
             dot={<CustomDot selectedId={selectedId} onClick={onSelectEntry} />}
@@ -127,7 +137,7 @@ export default function WeightChart({ entries, showMedian, selectedId, onSelectE
           {showMedian && (
             <Line
               type="monotone"
-              dataKey="median7"
+              dataKey="displayMedian"
               stroke="rgba(255,255,255,0.25)"
               strokeWidth={1.5}
               strokeDasharray="4 3"

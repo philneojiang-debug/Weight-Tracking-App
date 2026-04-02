@@ -1,4 +1,5 @@
 export const RANGES = [
+  { key: '7D',  label: '7D',  days: 7    },
   { key: '1M',  label: '1M',  months: 1  },
   { key: '3M',  label: '3M',  months: 3  },
   { key: '6M',  label: '6M',  months: 6  },
@@ -12,13 +13,20 @@ export function filterEntriesByRange(entries, rangeKey) {
   const range = RANGES.find(r => r.key === rangeKey)
   if (!range) return entries
 
-  // Avoid month-overflow: e.g. March 31 - 1 month = Feb 28, not March 3
   const now = new Date()
-  const cutoff = new Date(now.getFullYear(), now.getMonth() - range.months, now.getDate())
-  // If day overflowed (e.g. Feb 31 → Mar 3), back up to last day of intended month
-  if (cutoff.getDate() !== now.getDate()) {
-    cutoff.setDate(0) // last day of the previous month
+  let cutoff
+
+  if (range.days) {
+    cutoff = new Date(now)
+    cutoff.setDate(cutoff.getDate() - range.days)
+  } else {
+    // Avoid month-overflow: e.g. March 31 - 1 month = Feb 28, not March 3
+    cutoff = new Date(now.getFullYear(), now.getMonth() - range.months, now.getDate())
+    if (cutoff.getDate() !== now.getDate()) {
+      cutoff.setDate(0) // last day of the previous month
+    }
   }
+
   const cutoffStr = cutoff.toLocaleDateString('en-CA')
   return entries.filter(e => e.date >= cutoffStr)
 }
@@ -27,7 +35,6 @@ export default function RangeSelector({ value, onChange, entries }) {
   return (
     <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
       {RANGES.map(range => {
-        // Disable ranges that have no data
         const filtered = filterEntriesByRange(entries, range.key)
         const disabled = filtered.length === 0
 

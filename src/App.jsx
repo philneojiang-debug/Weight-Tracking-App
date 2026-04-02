@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useWeightData } from './hooks/useWeightData'
 import { useTheme } from './hooks/useTheme'
 import WeightForm from './components/WeightForm'
@@ -7,12 +7,46 @@ import EntryList from './components/EntryList'
 import Header from './components/Header'
 import RangeSelector, { filterEntriesByRange } from './components/RangeSelector'
 
+function WeightDelta({ entries, unit }) {
+  const delta = useMemo(() => {
+    if (entries.length < 2) return null
+    const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
+    const first = sorted[0].weight_lbs
+    const last  = sorted[sorted.length - 1].weight_lbs
+    const diff  = last - first
+    const converted = unit === 'kg'
+      ? parseFloat((diff / 2.20462).toFixed(1))
+      : parseFloat(diff.toFixed(1))
+    return converted
+  }, [entries, unit])
+
+  if (delta === null) return null
+
+  const gained = delta > 0
+  const neutral = delta === 0
+  const abs = Math.abs(delta)
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+      neutral
+        ? 'bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-white/40'
+        : gained
+        ? 'bg-red-100 dark:bg-red-400/15 text-red-500 dark:text-red-400'
+        : 'bg-emerald-100 dark:bg-emerald-400/15 text-emerald-600 dark:text-emerald-400'
+    }`}>
+      {neutral ? '→' : gained ? '↑' : '↓'}
+      {' '}{abs} {unit}
+    </span>
+  )
+}
+
 export default function App() {
   const { isDark, toggleTheme } = useTheme()
   const { entries, loading, error, isOnline, addEntry, updateEntry, deleteEntry } = useWeightData()
   const [showMedian, setShowMedian] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [range, setRange] = useState('ALL')
+  const [unit, setUnit] = useState('lbs')
   const rowRefs = useRef({})
 
   // Apply light mode body bg
@@ -24,12 +58,9 @@ export default function App() {
 
   const handleSelectEntry = useCallback((payload) => {
     setSelectedId(payload.id)
-    // Scroll to entry in list
     setTimeout(() => {
       const el = rowRefs.current[payload.id]?.current
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }, 50)
   }, [])
 
@@ -37,8 +68,8 @@ export default function App() {
     rowRefs.current[id] = ref
   }, [])
 
-  const existingDates = entries.map(e => e.date)
-  const visibleEntries = filterEntriesByRange(entries, range)
+  const existingDates    = entries.map(e => e.date)
+  const visibleEntries   = filterEntriesByRange(entries, range)
 
   return (
     <div className={`min-h-screen ${isDark ? 'dark bg-slate-950' : 'bg-slate-100'} transition-colors duration-300`}>
@@ -56,29 +87,37 @@ export default function App() {
 
         {/* Log form */}
         <div className="mb-5">
-          <WeightForm onAdd={addEntry} existingDates={existingDates} />
+          <WeightForm
+            onAdd={addEntry}
+            existingDates={existingDates}
+            unit={unit}
+            onUnitChange={setUnit}
+          />
         </div>
 
         {/* Chart section */}
         {entries.length > 0 && (
           <div className="mb-5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 pt-4 pb-2 shadow-sm dark:shadow-none">
+
             {/* Chart header */}
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h2 className="text-sm font-semibold text-slate-500 dark:text-white/70">
-                {visibleEntries.length}{visibleEntries.length !== entries.length ? ` of ${entries.length}` : ''} {entries.length === 1 ? 'entry' : 'entries'}
-              </h2>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-semibold text-slate-500 dark:text-white/70">
+                  {visibleEntries.length}{visibleEntries.length !== entries.length ? ` of ${entries.length}` : ''} {entries.length === 1 ? 'entry' : 'entries'}
+                </h2>
+                <WeightDelta entries={visibleEntries} unit={unit} />
+              </div>
               <button
                 onClick={() => setShowMedian(s => !s)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${
                   showMedian
                     ? 'bg-slate-200 dark:bg-white/20 text-slate-700 dark:text-white'
                     : 'bg-slate-100 dark:bg-white/[0.08] text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70'
                 }`}
               >
                 <span
-                  className="inline-block w-4 h-px rounded-full"
+                  className="inline-block w-4 rounded-full"
                   style={{
-                    background: showMedian ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)',
                     borderTop: '2px dashed currentColor',
                     height: '0px',
                     marginTop: '1px',
@@ -98,6 +137,7 @@ export default function App() {
               showMedian={showMedian}
               selectedId={selectedId}
               onSelectEntry={handleSelectEntry}
+              unit={unit}
             />
           </div>
         )}
@@ -117,6 +157,7 @@ export default function App() {
             onDelete={deleteEntry}
             onUpdate={updateEntry}
             onRowRef={handleRowRef}
+            unit={unit}
           />
         )}
 
