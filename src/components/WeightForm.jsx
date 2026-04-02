@@ -51,7 +51,7 @@ export default function WeightForm({ onAdd, existingDates = [], unit, onUnitChan
             value={date}
             max={today()}
             onChange={e => setDate(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all"
+            className="w-full bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-sm text-center focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all"
           />
         </div>
       </div>

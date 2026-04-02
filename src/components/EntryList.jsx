@@ -170,18 +170,34 @@ function EntryRow({ entry, isHighlighted, onDelete, onUpdate, onRef, unit }) {
   )
 }
 
+const PREVIEW_COUNT = 5
+
 export default function EntryList({ entries, selectedId, onDelete, onUpdate, onRowRef, unit = 'lbs' }) {
+  const [showAll, setShowAll] = useState(false)
   const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date))
 
   if (!sorted.length) return null
 
+  const visible = showAll ? sorted : sorted.slice(0, PREVIEW_COUNT)
+  const hiddenCount = sorted.length - PREVIEW_COUNT
+
   return (
     <div className="space-y-2">
-      <h2 className="text-xs font-semibold text-slate-400 dark:text-white/50 uppercase tracking-wider px-1">
-        All Entries
-      </h2>
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-xs font-semibold text-slate-400 dark:text-white/50 uppercase tracking-wider">
+          Recent Entries
+        </h2>
+        {sorted.length > PREVIEW_COUNT && (
+          <button
+            onClick={() => setShowAll(s => !s)}
+            className="text-xs font-medium text-teal-500 hover:text-teal-400 transition-colors"
+          >
+            {showAll ? 'Show less' : `Show all ${sorted.length}`}
+          </button>
+        )}
+      </div>
       <div className="space-y-2">
-        {sorted.map(entry => (
+        {visible.map(entry => (
           <EntryRow
             key={entry.id}
             entry={entry}
@@ -193,6 +209,14 @@ export default function EntryList({ entries, selectedId, onDelete, onUpdate, onR
           />
         ))}
       </div>
+      {!showAll && hiddenCount > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full py-3 rounded-xl text-sm font-medium text-slate-400 dark:text-white/40 bg-white dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.06] hover:text-teal-500 dark:hover:text-teal-400 hover:border-teal-500/30 transition-all"
+        >
+          + {hiddenCount} more entries
+        </button>
+      )}
     </div>
   )
 }
