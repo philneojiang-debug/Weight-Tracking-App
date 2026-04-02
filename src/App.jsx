@@ -73,7 +73,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'dark bg-slate-950' : 'bg-slate-100'} transition-colors duration-300`}>
-      <div className="max-w-2xl mx-auto px-4 pb-safe pb-8">
+      <div className="max-w-2xl mx-auto px-4 pb-safe pb-8 overflow-x-hidden">
 
         {/* Header */}
         <Header isDark={isDark} onToggleTheme={toggleTheme} isOnline={isOnline} />

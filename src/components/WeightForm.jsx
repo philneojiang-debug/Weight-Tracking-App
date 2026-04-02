@@ -36,7 +36,7 @@ export default function WeightForm({ onAdd, existingDates = [], unit, onUnitChan
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 space-y-4 shadow-sm"
+      className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 space-y-4 shadow-sm overflow-hidden"
     >
       <h2 className="text-base font-semibold text-slate-800 dark:text-white/90">
         Log Weight
@@ -50,7 +50,7 @@ export default function WeightForm({ onAdd, existingDates = [], unit, onUnitChan
           value={date}
           max={today()}
           onChange={e => setDate(e.target.value)}
-          className="w-full bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all"
+          className="w-full max-w-full bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/15 rounded-xl px-3 py-3 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-all"
         />
       </div>
 
