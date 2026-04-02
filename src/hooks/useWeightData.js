@@ -15,68 +15,68 @@ function saveLocalEntries(entries) {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries))
 }
 
-export function useWeightData() {
+function normalizeEntry(row) {
+  return {
+    id: row.id,
+    date: row.date,
+    weight_lbs: parseFloat(row.weight_lbs),
+  }
+}
+
+export function useWeightData(userId) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError]     = useState(null)
   const isOnline = supabase !== null
 
-  // Load entries
   const loadEntries = useCallback(async () => {
     setLoading(true)
     setError(null)
 
-    if (isOnline) {
+    if (isOnline && userId) {
       const { data, error: err } = await supabase
         .from('weight_entries')
         .select('*')
+        .eq('user_id', userId)
         .order('date', { ascending: true })
 
       if (err) {
         setError(err.message)
-        // Fallback to local
         setEntries(getLocalEntries())
       } else {
         const normalized = data.map(normalizeEntry)
         setEntries(normalized)
         saveLocalEntries(normalized)
       }
-    } else {
+    } else if (!isOnline) {
       setEntries(getLocalEntries())
+    } else {
+      // Online but no user yet — show nothing
+      setEntries([])
     }
 
     setLoading(false)
-  }, [isOnline])
+  }, [isOnline, userId])
 
   useEffect(() => {
     loadEntries()
   }, [loadEntries])
 
-  // Add entry
+  // Add or update entry for a given date
   const addEntry = useCallback(async ({ date, weight_lbs }) => {
-    const optimisticEntry = {
-      id: `local-${Date.now()}`,
-      date,
-      weight_lbs: parseFloat(weight_lbs),
-    }
-
-    // Check if entry for this date already exists
     const existing = entries.find(e => e.date === date)
 
-    if (isOnline) {
+    if (isOnline && userId) {
       if (existing) {
-        // Update existing
         const { data, error: err } = await supabase
           .from('weight_entries')
           .update({ weight_lbs: parseFloat(weight_lbs), updated_at: new Date().toISOString() })
           .eq('id', existing.id)
+          .eq('user_id', userId)
           .select()
           .single()
 
-        if (err) {
-          setError(err.message)
-          return false
-        }
+        if (err) { setError(err.message); return false }
 
         setEntries(prev => {
           const updated = prev.map(e => e.id === existing.id ? normalizeEntry(data) : e)
@@ -87,14 +87,11 @@ export function useWeightData() {
       } else {
         const { data, error: err } = await supabase
           .from('weight_entries')
-          .insert({ date, weight_lbs: parseFloat(weight_lbs) })
+          .insert({ date, weight_lbs: parseFloat(weight_lbs), user_id: userId })
           .select()
           .single()
 
-        if (err) {
-          setError(err.message)
-          return false
-        }
+        if (err) { setError(err.message); return false }
 
         setEntries(prev => {
           const updated = [...prev, normalizeEntry(data)]
@@ -104,7 +101,8 @@ export function useWeightData() {
         })
       }
     } else {
-      // Local only
+      // Local-only fallback
+      const optimistic = { id: `local-${Date.now()}`, date, weight_lbs: parseFloat(weight_lbs) }
       if (existing) {
         setEntries(prev => {
           const updated = prev.map(e =>
@@ -115,30 +113,28 @@ export function useWeightData() {
         })
       } else {
         setEntries(prev => {
-          const updated = [...prev, optimisticEntry]
-            .sort((a, b) => a.date.localeCompare(b.date))
+          const updated = [...prev, optimistic].sort((a, b) => a.date.localeCompare(b.date))
           saveLocalEntries(updated)
           return updated
         })
       }
     }
-    return true
-  }, [entries, isOnline])
 
-  // Update entry
+    return true
+  }, [entries, isOnline, userId])
+
+  // Edit an existing entry
   const updateEntry = useCallback(async (id, { date, weight_lbs }) => {
-    if (isOnline) {
+    if (isOnline && userId) {
       const { data, error: err } = await supabase
         .from('weight_entries')
         .update({ date, weight_lbs: parseFloat(weight_lbs), updated_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('user_id', userId)
         .select()
         .single()
 
-      if (err) {
-        setError(err.message)
-        return false
-      }
+      if (err) { setError(err.message); return false }
 
       setEntries(prev => {
         const updated = prev.map(e => e.id === id ? normalizeEntry(data) : e)
@@ -155,21 +151,20 @@ export function useWeightData() {
         return updated
       })
     }
-    return true
-  }, [isOnline])
 
-  // Delete entry
+    return true
+  }, [isOnline, userId])
+
+  // Delete an entry
   const deleteEntry = useCallback(async (id) => {
-    if (isOnline) {
+    if (isOnline && userId) {
       const { error: err } = await supabase
         .from('weight_entries')
         .delete()
         .eq('id', id)
+        .eq('user_id', userId)
 
-      if (err) {
-        setError(err.message)
-        return false
-      }
+      if (err) { setError(err.message); return false }
     }
 
     setEntries(prev => {
@@ -177,25 +172,9 @@ export function useWeightData() {
       saveLocalEntries(updated)
       return updated
     })
+
     return true
-  }, [isOnline])
+  }, [isOnline, userId])
 
-  return {
-    entries,
-    loading,
-    error,
-    isOnline,
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    reload: loadEntries,
-  }
-}
-
-function normalizeEntry(row) {
-  return {
-    id: row.id,
-    date: row.date,
-    weight_lbs: parseFloat(row.weight_lbs),
-  }
+  return { entries, loading, error, isOnline, addEntry, updateEntry, deleteEntry, reload: loadEntries }
 }
